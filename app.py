@@ -19,13 +19,20 @@ Reglas de negocio (todos los limites INCLUYEN el valor):
 
 from flask import Flask, render_template, abort, request
 from openpyxl import load_workbook
+from pathlib import Path
 
 # ============================================================
 # BODEGA: rutas y datos de entrada (no se escriben, solo leen)
 # ============================================================
 
-RUTA_MAESTRO = "INSUMOS/Maestro_Estudiantes.xlsx"   # lista oficial de estudiantes
-RUTA_NOTAS   = "INSUMOS/Registro_Evaluaciones.xlsx" # notas y asistencia por modulo
+# VARIABLE: carpeta donde vive este archivo (app.py), sin importar
+# desde donde se ejecute la aplicacion (local, Vercel, otro servidor)
+RAIZ = Path(__file__).resolve().parent
+
+# Las rutas a los Excel se arman SIEMPRE a partir de RAIZ, asi la app
+# encuentra la bodega aunque se ejecute desde otro directorio
+RUTA_MAESTRO = RAIZ / "INSUMOS" / "Maestro_Estudiantes.xlsx"   # lista oficial de estudiantes
+RUTA_NOTAS   = RAIZ / "INSUMOS" / "Registro_Evaluaciones.xlsx" # notas y asistencia por modulo
 
 UMBRAL_PROMEDIO   = 70   # nota minima para aprobar
 UMBRAL_ASISTENCIA = 80   # asistencia minima para tener certificado

@@ -1,3 +1,21 @@
 # Python
 __pycache__/
 *.pyc
+*.pyo
+
+# Entornos virtuales
+.venv/
+venv/
+
+# Archivos temporales y de log
+*.log
+*.tmp
+
+# Configuracion local y secretos
+.env
+.env.*
+!.env.example
+
+# Sistema
+.DS_Store
+Thumbs.db
