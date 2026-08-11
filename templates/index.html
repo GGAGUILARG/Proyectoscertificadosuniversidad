@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academia Horizonte - Certificados</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="encabezado">
+        <div class="contenedor">
+            <h1>Academia Horizonte</h1>
+            <p class="subtitulo">Control de certificados por cohorte</p>
+        </div>
+    </header>
+
+    <main class="contenedor">
+        <section class="resumen">
+            <!-- Tarjeta: certificados de Aprobacion (verde) -->
+            <div class="tarjeta tarjeta-dorada">
+                <span class="tarjeta-numero">{{ resumen.aprobados }}</span>
+                <span class="tarjeta-etiqueta">Certificados de Aprobación</span>
+            </div>
+            <!-- Tarjeta: certificados de Participacion (azul) -->
+            <div class="tarjeta">
+                <span class="tarjeta-numero">{{ resumen.participaciones }}</span>
+                <span class="tarjeta-etiqueta">Certificados de Participación</span>
+            </div>
+            <!-- Tarjeta: estudiantes sin certificado (rojo) -->
+            <div class="tarjeta">
+                <span class="tarjeta-numero">{{ resumen.sin_certificado }}</span>
+                <span class="tarjeta-etiqueta">Sin certificado</span>
+            </div>
+            <!-- Tarjeta: total procesado -->
+            <div class="tarjeta">
+                <span class="tarjeta-numero">{{ resumen.total }}</span>
+                <span class="tarjeta-etiqueta">Total</span>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Resultados por estudiante y programa</h2>
+
+            <!-- Filtro por programa (los dos programas del maestro) -->
+            <form class="filtro" method="get" action="{{ url_for('pagina_listado') }}">
+                <label for="programa">Filtrar por programa:</label>
+                <select id="programa" name="programa" onchange="this.form.submit()">
+                    <!-- Opcion por defecto: todos -->
+                    <option value="todos" {% if programa_seleccionado == 'todos' %}selected{% endif %}>Todos</option>
+                    <!-- BUCLE (Jinja): una opcion por programa -->
+                    {% for p in programas %}
+                    <option value="{{ p }}" {% if programa_seleccionado == p %}selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+                <noscript><button type="submit">Filtrar</button></noscript>
+            </form>
+
+            <table class="tabla">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Programa</th>
+                        <th>Módulos</th>
+                        <th>Promedio</th>
+                        <th>Asistencia</th>
+                        <th>Certificado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- BUCLE (manejado por Flask/Jinja): una fila por resultado -->
+                    {% for r in resultados %}
+                    <!-- Condicional (Jinja): el color de la fila segun el estado -->
+                    {% if r.estado == "Aprobado" %}
+                        <tr class="fila-aprobado">
+                    {% elif r.estado == "Participacion" %}
+                        <tr class="fila-participacion">
+                    {% else %}
+                        <tr class="fila-sin">
+                    {% endif %}
+                        <td>{{ r.nombre }}</td>
+                        <td>{{ r.programa }}</td>
+                        <td>{{ r.modulos | length }}</td>
+                        <td>{{ r.promedio | round(2) | replace(".", ",") }}%</td>
+                        <td>{{ r.asistencia | round(2) | replace(".", ",") }}%</td>
+                        <td>
+                            <!-- Condicional: solo hay enlace si hay certificado -->
+                            {% if r.estado != "Sin certificado" %}
+                                <a class="enlace-ver" href="{{ url_for('pagina_certificado', identificacion=r.identificacion, programa=r.programa) }}">Ver certificado</a>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Seccion aparte: las 3 inconsistencias detectadas -->
+        <section class="panel panel-inconsistencias">
+            <h2>Inconsistencias detectadas</h2>
+
+            <!-- Condicional + BUCLE (Jinja): solo se muestra si hay casos -->
+            <h3>1. Estudiantes del maestro sin evaluaciones</h3>
+            {% if inconsistencias.sin_evaluaciones %}
+                <ul class="lista-incidencias">
+                    {% for item in inconsistencias.sin_evaluaciones %}
+                    <li>{{ item.identificacion }} — {{ item.nombre }} ({{ item.programa }})</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="sin-incidencias">(ninguno)</p>
+            {% endif %}
+
+            <h3>2. Evaluaciones sin ficha en el maestro</h3>
+            {% if inconsistencias.sin_maestro %}
+                <ul class="lista-incidencias">
+                    {% for item in inconsistencias.sin_maestro %}
+                    <li>{{ item.identificacion }} — {{ item.programa }} ({{ item.modulos }} módulos cursados)</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="sin-incidencias">(ninguno)</p>
+            {% endif %}
+
+            <h3>3. Estudiantes sin certificado (asistencia final menor a 80)</h3>
+            {% if inconsistencias.sin_certificado %}
+                <ul class="lista-incidencias">
+                    {% for item in inconsistencias.sin_certificado %}
+                    <li>
+                        {{ item.identificacion }} — {{ item.nombre }} —
+                        promedio {{ item.promedio }}% y asistencia {{ item.asistencia }}%;
+                        el último módulo ({{ item.ultimo_modulo }}) quedó con nota
+                        {{ item.ultima_nota }} y asistencia {{ item.ultima_asistencia }}%
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="sin-incidencias">(ninguno)</p>
+            {% endif %}
+        </section>
+    </main>
+
+    <footer class="pie">
+        <div class="contenedor">Academia Horizonte &mdash; Sistema de certificados de formación</div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificado - {{ resultado.nombre }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="cuerpo-certificado">
+    <!-- Controles que NO se imprimen (se ocultan en la impresion) -->
+    <div class="barra-acciones">
+        <a class="boton boton-vuelta" href="{{ url_for('pagina_listado') }}">&larr; Volver al listado</a>
+        <button class="boton boton-print" onclick="window.print()">Imprimir o guardar PDF</button>
+    </div>
+
+    <!-- El certificado en si -->
+    <main class="certificado">
+        <!-- Ornamentos dorados del marco -->
+        <div class="marco-dorado"></div>
+
+        <header class="certificado-encabezado">
+            <div class="sello">{{ resultado.programa }}</div>
+            <h1 class="academia">Academia Horizonte</h1>
+            <p class="lema">Formación técnica para empresas</p>
+        </header>
+
+        <div class="certificado-cuerpo">
+            <!-- Condicional: el titulo del certificado segun el estado -->
+            {% if resultado.estado == "Aprobado" %}
+                <h2 class="titulo-certificado">Certificado de Aprobación</h2>
+            {% else %}
+                <h2 class="titulo-certificado">Certificado de Participación</h2>
+            {% endif %}
+
+            <p class="linea-frase">Se otorga a</p>
+            <p class="nombre-estudiante">{{ resultado.nombre }}</p>
+            <p class="linea-frase">
+                por haber completado el programa
+                <strong>{{ resultado.programa }}</strong>
+                (cohorte {{ resultado.cohorte }}), con los siguientes resultados:
+            </p>
+
+            <!-- Tabla: modulo, nota y asistencia de cada modulo cursado -->
+            <table class="tabla-modulos">
+                <thead>
+                    <tr>
+                        <th>Módulo</th>
+                        <th>Nota</th>
+                        <th>Asistencia</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- BUCLE (Jinja): una fila por modulo cursado -->
+                    {% for modulo in resultado.modulos %}
+                    <tr>
+                        <td>{{ modulo.modulo }}</td>
+                        <td>{{ modulo.nota }}%</td>
+                        <td>{{ modulo.asistencia }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Resumen: promedio y asistencia final -->
+            <p class="resumen-notas">
+                Promedio: <strong>{{ formatear(resultado.promedio) }}%</strong>
+                &nbsp;|&nbsp;
+                Asistencia: <strong>{{ formatear(resultado.asistencia) }}%</strong>
+            </p>
+        </div>
+
+        <div class="certificado-footer">
+            <p class="fecha">Emitido el {{ fecha_emision }}</p>
+            <p class="firma">Academia Horizonte</p>
+        </div>
+    </main>
+</body>
+</html>
