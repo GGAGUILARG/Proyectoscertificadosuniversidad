@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de accesos - Academia Horizonte</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="encabezado">
+        <div class="contenedor">
+            <h1>Academia Horizonte</h1>
+            <p class="subtitulo">Gestión de accesos (solo administrador)</p>
+            <div class="barra-usuario">
+                <span>Sesión: {{ usuario.correo }} ({{ usuario.rol }})</span>
+                <div class="acciones-usuario">
+                    <a class="enlace-admin" href="{{ url_for('pagina_listado') }}">Volver al panel</a>
+                    <form method="post" action="{{ url_for('cerrar_sesion') }}">
+                        <button type="submit" class="boton-salir">Cerrar sesión</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="contenedor">
+        <section class="panel">
+            <h2>Crear usuario normal</h2>
+
+            {% with mensajes = get_flashed_messages() %}
+                {% if mensajes %}
+                    <p class="mensaje-admin">{{ mensajes[0] }}</p>
+                {% endif %}
+            {% endwith %}
+
+            <form class="form-admin" method="post">
+                <label for="correo">Correo del usuario</label>
+                <input id="correo" name="correo" type="email" value="{{ correo_intentado }}" required autocomplete="email">
+
+                <label for="clave">Contraseña temporal</label>
+                <input id="clave" name="clave" type="password" required autocomplete="new-password" minlength="8">
+
+                <button type="submit">Crear acceso</button>
+            </form>
+        </section>
+
+        <section class="panel">
+            <h2>Usuarios con acceso</h2>
+
+            <table class="tabla tabla-usuarios">
+                <thead>
+                    <tr>
+                        <th>Correo</th>
+                        <th>Rol</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in usuarios %}
+                    <tr>
+                        <td>{{ item.correo }}</td>
+                        <td>{{ item.rol }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <footer class="pie">
+        <div class="contenedor">Academia Horizonte &mdash; Sistema de certificados de formación</div>
+    </footer>
+</body>
+</html>

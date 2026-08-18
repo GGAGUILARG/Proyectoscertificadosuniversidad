@@ -17,9 +17,14 @@ Reglas de negocio (todos los limites INCLUYEN el valor):
   - Un certificado por cada combinacion (Identificacion + Programa).
 """
 
-from flask import Flask, render_template, abort, request
+import json
+import os
+from functools import wraps
+
+from flask import Flask, render_template, abort, request, redirect, url_for, session, flash
 from openpyxl import load_workbook
 from pathlib import Path
+from werkzeug.security import check_password_hash, generate_password_hash
 
 # ============================================================
 # BODEGA: rutas y datos de entrada (no se escriben, solo leen)
@@ -37,7 +42,251 @@ RUTA_NOTAS   = RAIZ / "INSUMOS" / "Registro_Evaluaciones.xlsx" # notas y asisten
 UMBRAL_PROMEDIO   = 70   # nota minima para aprobar
 UMBRAL_ASISTENCIA = 80   # asistencia minima para tener certificado
 
+
+def cargar_variables_locales_entorno():
+    """
+    Carga variables desde .env solo en desarrollo local.
+    En Vercel las variables se definen en Project Settings.
+    """
+    ruta_env = RAIZ / ".env"
+    if not ruta_env.exists():
+        return
+
+    try:
+        lineas = ruta_env.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return
+
+    for linea in lineas:
+        texto = linea.strip()
+        if not texto or texto.startswith("#"):
+            continue
+
+        if "=" not in texto:
+            continue
+
+        clave, valor = texto.split("=", 1)
+        clave = clave.strip()
+        valor = valor.strip()
+
+        if not clave:
+            continue
+
+        os.environ.setdefault(clave, valor)
+
+
+cargar_variables_locales_entorno()
+
 app = Flask(__name__)
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "cambiar-esta-clave-en-entorno")
+
+RUTA_USUARIOS = Path(os.getenv("RUTA_USUARIOS", "usuarios_locales.json"))
+if not RUTA_USUARIOS.is_absolute():
+    RUTA_USUARIOS = RAIZ / RUTA_USUARIOS
+
+
+def normalizar_usuario(item):
+    if not isinstance(item, dict):
+        return None
+
+    correo = str(item.get("correo", "")).strip().lower()
+    rol = str(item.get("rol", "normal")).strip().lower()
+    clave_hash = str(item.get("clave_hash", "")).strip()
+    clave = str(item.get("clave", "")).strip()
+
+    if not correo:
+        return None
+
+    if rol not in {"admin", "normal"}:
+        rol = "normal"
+
+    return {
+        "correo": correo,
+        "rol": rol,
+        "clave_hash": clave_hash,
+        "clave": clave,
+    }
+
+
+def leer_usuarios_desde_texto_json(texto):
+    if not texto:
+        return []
+
+    try:
+        datos = json.loads(texto)
+    except json.JSONDecodeError:
+        return []
+
+    if not isinstance(datos, list):
+        return []
+
+    usuarios = []
+    for item in datos:
+        usuario = normalizar_usuario(item)
+        if usuario is not None:
+            usuarios.append(usuario)
+
+    return usuarios
+
+
+def obtener_admin_inicial_desde_entorno():
+    correo = os.getenv("ADMIN_CORREO", "").strip().lower()
+    clave_hash = os.getenv("ADMIN_CLAVE_HASH", "").strip()
+    clave = os.getenv("ADMIN_CLAVE", "").strip()
+
+    if not correo:
+        return None
+
+    if not clave_hash and not clave:
+        return None
+
+    return {
+        "correo": correo,
+        "rol": "admin",
+        "clave_hash": clave_hash,
+        "clave": clave,
+    }
+
+
+def guardar_usuarios_autorizados(usuarios):
+    try:
+        RUTA_USUARIOS.parent.mkdir(parents=True, exist_ok=True)
+        with RUTA_USUARIOS.open("w", encoding="utf-8") as archivo:
+            json.dump(usuarios, archivo, ensure_ascii=False, indent=2)
+    except OSError:
+        return False
+
+    return True
+
+
+def cargar_usuarios_autorizados():
+    """
+    Lee usuarios desde usuarios_locales.json (si existe).
+    Si no existe, usa la variable de entorno USUARIOS_JSON.
+
+    El admin inicial tambien puede llegar por entorno:
+      ADMIN_CORREO + ADMIN_CLAVE_HASH (o ADMIN_CLAVE para pruebas).
+
+    Formato esperado (lista JSON):
+      [
+        {"correo": "admin@academia.cr", "rol": "admin", "clave_hash": "..."},
+        {"correo": "usuario@academia.cr", "rol": "normal", "clave_hash": "..."}
+      ]
+
+    Tambien acepta "clave" (texto plano) para pruebas locales,
+    pero en produccion se recomienda usar solo "clave_hash".
+    """
+    if RUTA_USUARIOS.exists():
+        try:
+            texto_archivo = RUTA_USUARIOS.read_text(encoding="utf-8")
+        except OSError:
+            texto_archivo = ""
+        usuarios = leer_usuarios_desde_texto_json(texto_archivo)
+    else:
+        texto_entorno = os.getenv("USUARIOS_JSON", "").strip()
+        usuarios = leer_usuarios_desde_texto_json(texto_entorno)
+
+    admin_inicial = obtener_admin_inicial_desde_entorno()
+    if admin_inicial is not None:
+        correos = {u["correo"] for u in usuarios}
+        if admin_inicial["correo"] not in correos:
+            usuarios.append(admin_inicial)
+
+    return usuarios
+
+
+def crear_usuario_normal(correo, clave):
+    correo_limpio = correo.strip().lower()
+    clave_limpia = clave.strip()
+
+    if not correo_limpio or "@" not in correo_limpio:
+        return False, "El correo no es válido."
+
+    if len(clave_limpia) < 8:
+        return False, "La contraseña debe tener al menos 8 caracteres."
+
+    usuarios = cargar_usuarios_autorizados()
+    existe = any(u["correo"] == correo_limpio for u in usuarios)
+    if existe:
+        return False, "Ese correo ya tiene acceso."
+
+    usuarios.append({
+        "correo": correo_limpio,
+        "rol": "normal",
+        "clave_hash": generate_password_hash(clave_limpia),
+        "clave": "",
+    })
+
+    if not guardar_usuarios_autorizados(usuarios):
+        return False, "No se pudo guardar el usuario. En Vercel necesitás un almacenamiento externo para persistir altas."
+
+    return True, "Acceso creado correctamente."
+
+
+def listar_usuarios_publicos():
+    usuarios = cargar_usuarios_autorizados()
+    ordenados = sorted(usuarios, key=lambda u: (u["rol"], u["correo"]))
+    return [{"correo": u["correo"], "rol": u["rol"]} for u in ordenados]
+
+
+def validar_credenciales(correo, clave):
+    correo_limpio = correo.strip().lower()
+
+    for usuario in cargar_usuarios_autorizados():
+        if usuario["correo"] != correo_limpio:
+            continue
+
+        if usuario["clave_hash"]:
+            if check_password_hash(usuario["clave_hash"], clave):
+                return {"correo": usuario["correo"], "rol": usuario["rol"]}
+            return None
+
+        if usuario["clave"] and usuario["clave"] == clave:
+            return {"correo": usuario["correo"], "rol": usuario["rol"]}
+
+        return None
+
+    return None
+
+
+def obtener_usuario_actual():
+    correo = session.get("usuario_correo")
+    rol = session.get("usuario_rol")
+
+    if not correo or not rol:
+        return None
+
+    return {
+        "correo": correo,
+        "rol": rol,
+        "es_admin": rol == "admin",
+    }
+
+
+def login_requerido(funcion_vista):
+    @wraps(funcion_vista)
+    def envoltura(*args, **kwargs):
+        usuario = obtener_usuario_actual()
+        if usuario is None:
+            return redirect(url_for("pagina_login", siguiente=request.path))
+        return funcion_vista(*args, **kwargs)
+
+    return envoltura
+
+
+def admin_requerido(funcion_vista):
+    @wraps(funcion_vista)
+    def envoltura(*args, **kwargs):
+        usuario = obtener_usuario_actual()
+        if usuario is None:
+            return redirect(url_for("pagina_login", siguiente=request.path))
+
+        if not usuario["es_admin"]:
+            abort(403)
+
+        return funcion_vista(*args, **kwargs)
+
+    return envoltura
 
 
 # ============================================================
@@ -293,11 +542,93 @@ def calcular_inconsistencias():
 # SALON: rutas web que muestran la informacion
 # ============================================================
 
+
+@app.route("/login", methods=["GET", "POST"])
+def pagina_login():
+    if obtener_usuario_actual() is not None:
+        return redirect(url_for("pagina_listado"))
+
+    if not cargar_usuarios_autorizados():
+        flash("No hay usuarios configurados. Definí un admin con ADMIN_CORREO y ADMIN_CLAVE_HASH.")
+
+    if request.method == "POST":
+        correo = request.form.get("correo", "").strip()
+        clave = request.form.get("clave", "")
+        usuario = validar_credenciales(correo, clave)
+
+        if usuario is None:
+            flash("Correo o contraseña incorrectos.")
+            return render_template("login.html", correo_intentado=correo)
+
+        session["usuario_correo"] = usuario["correo"]
+        session["usuario_rol"] = usuario["rol"]
+
+        siguiente = request.args.get("siguiente")
+        if siguiente and siguiente.startswith("/"):
+            return redirect(siguiente)
+
+        return redirect(url_for("pagina_listado"))
+
+    return render_template("login.html", correo_intentado="")
+
+
+@app.route("/logout", methods=["POST"])
+@login_requerido
+def cerrar_sesion():
+    session.clear()
+    return redirect(url_for("pagina_login"))
+
+
+@app.route("/admin/usuarios", methods=["GET", "POST"])
+@login_requerido
+@admin_requerido
+def pagina_admin_usuarios():
+    usuario = obtener_usuario_actual()
+
+    if request.method == "POST":
+        correo = request.form.get("correo", "")
+        clave = request.form.get("clave", "")
+
+        creado, mensaje = crear_usuario_normal(correo, clave)
+        flash(mensaje)
+
+        if creado:
+            return redirect(url_for("pagina_admin_usuarios"))
+
+        usuarios = listar_usuarios_publicos()
+        return render_template(
+            "admin_usuarios.html",
+            usuario=usuario,
+            usuarios=usuarios,
+            correo_intentado=correo,
+        )
+
+    usuarios = listar_usuarios_publicos()
+    return render_template(
+        "admin_usuarios.html",
+        usuario=usuario,
+        usuarios=usuarios,
+        correo_intentado="",
+    )
+
 # RUTA: pagina principal con el listado de resultados
 @app.route("/")
+@login_requerido
 def pagina_listado():
+    usuario = obtener_usuario_actual()
+
     resultados = calcular_resultados()          # FUNCION: resultados validados
-    inconsistencias = calcular_inconsistencias() # FUNCION: datos que no encajan
+    es_admin = usuario["es_admin"]
+
+    if es_admin:
+        inconsistencias = calcular_inconsistencias() # FUNCION: datos que no encajan
+    else:
+        inconsistencias = {
+            "sin_evaluaciones": [],
+            "sin_maestro": [],
+            "sin_certificado": [],
+        }
+
     programas = obtener_programas()              # FUNCION: programas del maestro
 
     # VARIABLE: filtro elegido en la pagina (?programa=...), "todos" por defecto
@@ -340,12 +671,16 @@ def pagina_listado():
         inconsistencias=inconsistencias,
         programas=programas,
         programa_seleccionado=programa_filtro,
+        usuario=usuario,
+        es_admin=es_admin,
     )
 
 
 # RUTA: vista individual del certificado de un estudiante
 @app.route("/certificado/<identificacion>/<programa>")
+@login_requerido
 def pagina_certificado(identificacion, programa):
+    usuario = obtener_usuario_actual()
     resultados = calcular_resultados()
 
     resultado = None  # VARIABLE: guardara el resultado buscado
@@ -373,6 +708,7 @@ def pagina_certificado(identificacion, programa):
         resultado=resultado,
         formatear=formatear_numero,
         fecha_emision=fecha_emision,
+        usuario=usuario,
     )
 
 

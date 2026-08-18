@@ -51,6 +51,53 @@ body {
     font-size: 14px;
 }
 
+.barra-usuario {
+    margin-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: #dbe7f8;
+}
+
+.barra-usuario form {
+    margin: 0;
+}
+
+.acciones-usuario {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.enlace-admin {
+    color: #ffffff;
+    text-decoration: none;
+    border: 1px solid #c8d6ea;
+    border-radius: 6px;
+    padding: 5px 9px;
+    font-size: 12px;
+}
+
+.enlace-admin:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.boton-salir {
+    border: 1px solid #c8d6ea;
+    background: transparent;
+    color: #ffffff;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.boton-salir:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
 /* ---------- Tarjetas de resumen ---------- */
 
 .resumen {
@@ -295,6 +342,31 @@ body {
     background: #eef1f6;
 }
 
+.barra-usuario-certificado {
+    max-width: 900px;
+    margin: 18px auto 8px;
+    padding: 0 20px;
+    color: var(--azul-marino);
+}
+
+.barra-usuario-certificado .boton-salir {
+    color: var(--azul-marino);
+    border-color: var(--azul-marino);
+}
+
+.barra-usuario-certificado .enlace-admin {
+    color: var(--azul-marino);
+    border-color: var(--azul-marino);
+}
+
+.barra-usuario-certificado .boton-salir:hover {
+    background: rgba(13, 43, 82, 0.08);
+}
+
+.barra-usuario-certificado .enlace-admin:hover {
+    background: rgba(13, 43, 82, 0.08);
+}
+
 .barra-acciones {
     display: flex;
     justify-content: space-between;
@@ -459,6 +531,10 @@ body {
         background: #ffffff;
     }
 
+    .barra-usuario-certificado {
+        display: none;
+    }
+
     .barra-acciones {
         display: none;
     }
@@ -469,4 +545,138 @@ body {
         border: 4px double var(--azul-marino);
         max-width: 100%;
     }
+}
+
+/* ============================================================
+   Pantalla de login
+   ============================================================ */
+
+.cuerpo-login {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #eef2f8, #dfe8f4);
+    padding: 16px;
+}
+
+.tarjeta-login {
+    width: 100%;
+    max-width: 420px;
+    background: #ffffff;
+    border: 1px solid #dbe2ec;
+    border-top: 5px solid var(--dorado);
+    border-radius: 10px;
+    padding: 24px;
+    box-shadow: 0 8px 26px rgba(13, 43, 82, 0.14);
+}
+
+.tarjeta-login h1 {
+    color: var(--azul-marino);
+    font-size: 28px;
+    margin-bottom: 4px;
+}
+
+.subtitulo-login {
+    color: #5a6b84;
+    font-size: 14px;
+    margin-bottom: 14px;
+}
+
+.alerta-login {
+    background: #fdecec;
+    border: 1px solid #f0c0c0;
+    color: #a12828;
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+.form-login {
+    display: grid;
+    gap: 8px;
+}
+
+.form-login label {
+    font-weight: 600;
+    color: var(--azul-marino);
+    font-size: 14px;
+}
+
+.form-login input {
+    border: 1px solid #c6d2e4;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.form-login button {
+    margin-top: 4px;
+    border: none;
+    border-radius: 6px;
+    padding: 10px;
+    background: var(--azul-marino);
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.form-login button:hover {
+    background: var(--azul-oscuro);
+}
+
+/* ============================================================
+   Gestión de usuarios (admin)
+   ============================================================ */
+
+.mensaje-admin {
+    background: #f4f9ea;
+    border: 1px solid #cde3a0;
+    color: #466122;
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+.form-admin {
+    display: grid;
+    gap: 8px;
+    max-width: 440px;
+}
+
+.form-admin label {
+    font-weight: 600;
+    color: var(--azul-marino);
+    font-size: 14px;
+}
+
+.form-admin input {
+    border: 1px solid #c6d2e4;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.form-admin button {
+    width: fit-content;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 14px;
+    background: var(--azul-marino);
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.form-admin button:hover {
+    background: var(--azul-oscuro);
+}
+
+.tabla-usuarios {
+    max-width: 640px;
 }

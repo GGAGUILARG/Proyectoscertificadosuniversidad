@@ -11,6 +11,17 @@
         <div class="contenedor">
             <h1>Academia Horizonte</h1>
             <p class="subtitulo">Control de certificados por cohorte</p>
+            <div class="barra-usuario">
+                <span>Sesión: {{ usuario.correo }} ({{ usuario.rol }})</span>
+                <div class="acciones-usuario">
+                    {% if es_admin %}
+                        <a class="enlace-admin" href="{{ url_for('pagina_admin_usuarios') }}">Gestionar accesos</a>
+                    {% endif %}
+                    <form method="post" action="{{ url_for('cerrar_sesion') }}">
+                        <button type="submit" class="boton-salir">Cerrar sesión</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -96,49 +107,51 @@
             </table>
         </section>
 
-        <!-- Seccion aparte: las 3 inconsistencias detectadas -->
-        <section class="panel panel-inconsistencias">
-            <h2>Inconsistencias detectadas</h2>
+        {% if es_admin %}
+            <!-- Seccion aparte: las 3 inconsistencias detectadas (solo admin) -->
+            <section class="panel panel-inconsistencias">
+                <h2>Inconsistencias detectadas</h2>
 
-            <!-- Condicional + BUCLE (Jinja): solo se muestra si hay casos -->
-            <h3>1. Estudiantes del maestro sin evaluaciones</h3>
-            {% if inconsistencias.sin_evaluaciones %}
-                <ul class="lista-incidencias">
-                    {% for item in inconsistencias.sin_evaluaciones %}
-                    <li>{{ item.identificacion }} — {{ item.nombre }} ({{ item.programa }})</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="sin-incidencias">(ninguno)</p>
-            {% endif %}
+                <!-- Condicional + BUCLE (Jinja): solo se muestra si hay casos -->
+                <h3>1. Estudiantes del maestro sin evaluaciones</h3>
+                {% if inconsistencias.sin_evaluaciones %}
+                    <ul class="lista-incidencias">
+                        {% for item in inconsistencias.sin_evaluaciones %}
+                        <li>{{ item.identificacion }} — {{ item.nombre }} ({{ item.programa }})</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="sin-incidencias">(ninguno)</p>
+                {% endif %}
 
-            <h3>2. Evaluaciones sin ficha en el maestro</h3>
-            {% if inconsistencias.sin_maestro %}
-                <ul class="lista-incidencias">
-                    {% for item in inconsistencias.sin_maestro %}
-                    <li>{{ item.identificacion }} — {{ item.programa }} ({{ item.modulos }} módulos cursados)</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="sin-incidencias">(ninguno)</p>
-            {% endif %}
+                <h3>2. Evaluaciones sin ficha en el maestro</h3>
+                {% if inconsistencias.sin_maestro %}
+                    <ul class="lista-incidencias">
+                        {% for item in inconsistencias.sin_maestro %}
+                        <li>{{ item.identificacion }} — {{ item.programa }} ({{ item.modulos }} módulos cursados)</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="sin-incidencias">(ninguno)</p>
+                {% endif %}
 
-            <h3>3. Estudiantes sin certificado (asistencia final menor a 80)</h3>
-            {% if inconsistencias.sin_certificado %}
-                <ul class="lista-incidencias">
-                    {% for item in inconsistencias.sin_certificado %}
-                    <li>
-                        {{ item.identificacion }} — {{ item.nombre }} —
-                        promedio {{ item.promedio }}% y asistencia {{ item.asistencia }}%;
-                        el último módulo ({{ item.ultimo_modulo }}) quedó con nota
-                        {{ item.ultima_nota }} y asistencia {{ item.ultima_asistencia }}%
-                    </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="sin-incidencias">(ninguno)</p>
-            {% endif %}
-        </section>
+                <h3>3. Estudiantes sin certificado (asistencia final menor a 80)</h3>
+                {% if inconsistencias.sin_certificado %}
+                    <ul class="lista-incidencias">
+                        {% for item in inconsistencias.sin_certificado %}
+                        <li>
+                            {{ item.identificacion }} — {{ item.nombre }} —
+                            promedio {{ item.promedio }}% y asistencia {{ item.asistencia }}%;
+                            el último módulo ({{ item.ultimo_modulo }}) quedó con nota
+                            {{ item.ultima_nota }} y asistencia {{ item.ultima_asistencia }}%
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="sin-incidencias">(ninguno)</p>
+                {% endif %}
+            </section>
+        {% endif %}
     </main>
 
     <footer class="pie">

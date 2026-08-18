@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ingreso - Academia Horizonte</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="cuerpo-login">
+    <main class="tarjeta-login" role="main">
+        <h1>Academia Horizonte</h1>
+        <p class="subtitulo-login">Ingresá con tu correo y contraseña</p>
+
+        {% with mensajes = get_flashed_messages() %}
+            {% if mensajes %}
+                <div class="alerta-login">{{ mensajes[0] }}</div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="post" class="form-login">
+            <label for="correo">Correo</label>
+            <input id="correo" name="correo" type="email" value="{{ correo_intentado }}" required autocomplete="email">
+
+            <label for="clave">Contraseña</label>
+            <input id="clave" name="clave" type="password" required autocomplete="current-password">
+
+            <button type="submit">Entrar</button>
+        </form>
+    </main>
+</body>
+</html>

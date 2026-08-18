@@ -8,6 +8,18 @@
 </head>
 <body class="cuerpo-certificado">
     <!-- Controles que NO se imprimen (se ocultan en la impresion) -->
+    <div class="barra-usuario barra-usuario-certificado">
+        <span>Sesión: {{ usuario.correo }} ({{ usuario.rol }})</span>
+        <div class="acciones-usuario">
+            {% if usuario.es_admin %}
+                <a class="enlace-admin" href="{{ url_for('pagina_admin_usuarios') }}">Gestionar accesos</a>
+            {% endif %}
+            <form method="post" action="{{ url_for('cerrar_sesion') }}">
+                <button type="submit" class="boton-salir">Cerrar sesión</button>
+            </form>
+        </div>
+    </div>
+
     <div class="barra-acciones">
         <a class="boton boton-vuelta" href="{{ url_for('pagina_listado') }}">&larr; Volver al listado</a>
         <button class="boton boton-print" onclick="window.print()">Imprimir o guardar PDF</button>
